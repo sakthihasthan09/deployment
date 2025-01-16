@@ -1,0 +1,40 @@
+trigger:
+- main  # Specify the branch to trigger the pipeline
+
+pool:
+  vmImage: 'ubuntu-latest'  # Choose a VM image
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: Build
+    displayName: Build Job
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '6.x'  # Specify the .NET version
+    - script: dotnet build --configuration $(buildConfiguration)
+      displayName: Build Solution
+
+- stage: Deploy
+  displayName: Deploy Stage
+  dependsOn: Build
+  jobs:
+  - deployment: DeployWebApp
+    displayName: Deploy to Azure Web App
+    environment: 'staging'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '<YOUR_SERVICE_CONNECTION>'
+              appType: 'webApp'
+              appName: '<YOUR_APP_NAME>'
+              package: $(System.DefaultWorkingDirectory)/**/*.zip
